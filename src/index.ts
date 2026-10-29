@@ -16,14 +16,12 @@ export class HermesContainer extends DurableObject {
       const results = {};
 
       const commands = [
-        ["sh", "-c", "cat /opt/hermes/docker/main-wrapper.sh 2>/dev/null || echo 'not found'"],
-        ["sh", "-c", "ls -la /run/service/ 2>/dev/null || echo 'no service dir'"],
-        ["sh", "-c", "find /run/service -name 'run' -exec echo {} \\; -exec cat {} \\; 2>/dev/null | head -100"],
-        ["sh", "-c", "ls -la /opt/hermes/ 2>/dev/null"],
-        ["sh", "-c", "cat /opt/hermes/docker/entrypoint.sh 2>/dev/null || echo 'no entrypoint'"],
-        ["sh", "-c", "find /run/service -name 'finish' -exec echo {} \\; -exec cat {} \\; 2>/dev/null | head -50"],
-        ["sh", "-c", "s6-svstat /run/service/* 2>/dev/null || echo 's6-svstat not available'"],
-        ["sh", "-c", "cat /run/service/*/log/fifo 2>/dev/null || ls /var/log/ 2>/dev/null || echo 'no logs'"],
+        ["sh", "-c", "cat /opt/hermes/hermes"],
+        ["sh", "-c", "head -80 /opt/hermes/.env.example"],
+        ["sh", "-c", "ls /etc/cont-init.d/ 2>/dev/null"],
+        ["sh", "-c", "cat /opt/hermes/docker/stage2-hook.sh 2>/dev/null | head -80"],
+        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes --help' 2>&1 | head -50"],
+        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes 2>&1' | head -50"],
       ];
 
       for (const cmd of commands) {
@@ -33,7 +31,7 @@ export class HermesContainer extends DurableObject {
           results[cmd.join(" ")] = {
             exitCode: output.exitCode,
             stdout: decoder.decode(output.stdout).slice(0, 3000),
-            stderr: decoder.decode(output.stderr).slice(0, 500),
+            stderr: decoder.decode(output.stderr).slice(0, 1000),
           };
         } catch (e) {
           results[cmd.join(" ")] = { error: e.message };
