@@ -16,25 +16,25 @@ export class HermesContainer extends DurableObject {
       const results = {};
 
       const commands = [
-        ["sh", "-c", "cat /opt/hermes/hermes"],
-        ["sh", "-c", "head -80 /opt/hermes/.env.example"],
-        ["sh", "-c", "ls /etc/cont-init.d/ 2>/dev/null"],
-        ["sh", "-c", "cat /opt/hermes/docker/stage2-hook.sh 2>/dev/null | head -80"],
-        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes --help' 2>&1 | head -50"],
-        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes 2>&1' | head -50"],
+        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes gateway --help' 2>&1 | head -60"],
+        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes portal --help' 2>&1 | head -40"],
+        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes proxy --help' 2>&1 | head -40"],
+        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes status' 2>&1 | head -40"],
+        ["sh", "-c", "grep -i port /opt/hermes/.env.example | head -20"],
+        ["sh", "-c", "grep -i 'gateway\\|port\\|listen\\|server\\|http' /opt/hermes/cli-config.yaml.example | head -30"],
       ];
 
       for (const cmd of commands) {
         try {
           const process = await this.ctx.container.exec(cmd);
           const output = await process.output();
-          results[cmd.join(" ")] = {
+          results[cmd.slice(2).join("")] = {
             exitCode: output.exitCode,
             stdout: decoder.decode(output.stdout).slice(0, 3000),
             stderr: decoder.decode(output.stderr).slice(0, 1000),
           };
         } catch (e) {
-          results[cmd.join(" ")] = { error: e.message };
+          results[cmd.slice(2).join("")] = { error: e.message };
         }
       }
 
