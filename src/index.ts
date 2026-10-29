@@ -12,34 +12,31 @@ export class HermesContainer extends DurableObject {
       });
       await this.starting;
 
-      const decoder = new TextDecoder();
-      const results = {};
-
-      const commands = [
-        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes gateway --help' 2>&1 | head -60"],
-        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes portal --help' 2>&1 | head -40"],
-        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes proxy --help' 2>&1 | head -40"],
-        ["sh", "-c", "su hermes -s /bin/sh -c 'cd /opt/hermes && /opt/hermes/hermes status' 2>&1 | head -40"],
-        ["sh", "-c", "grep -i port /opt/hermes/.env.example | head -20"],
-        ["sh", "-c", "grep -i 'gateway\\|port\\|listen\\|server\\|http' /opt/hermes/cli-config.yaml.example | head -30"],
-      ];
-
-      for (const cmd of commands) {
+      // Probe common ports to find where Hermes gateway is listening
+      const ports = [3000, 5000, 8000, 8080, 8888, 11434, 4000, 9000];
+      for (const port of ports) {
         try {
-          const process = await this.ctx.container.exec(cmd);
-          const output = await process.output();
-          results[cmd.slice(2).join("")] = {
-            exitCode: output.exitCode,
-            stdout: decoder.decode(output.stdout).slice(0, 3000),
-            stderr: decoder.decode(output.stderr).slice(0, 1000),
-          };
+          const containerPort = this.ctx.container.getTcpPort(port);
+          const url = new URL(request.url);
+          url.protocol = "http:";
+          url.host = "container";
+          const forwarded = new Request(url, request);
+          forwarded.headers.delete("host");
+          const response = await containerPort.fetch(forwarded);
+          return new Response(response.body, {
+            status: response.status,
+            headers: response.headers,
+          });
         } catch (e) {
-          results[cmd.slice(2).join("")] = { error: e.message };
+          continue;
         }
       }
 
-      return new Response(JSON.stringify(results, null, 2), {
-        status: 200,
+      return new Response(JSON.stringify({
+        error: "Hermes gateway not listening on any probed port",
+        tried: ports,
+      }), {
+        status: 502,
         headers: { "Content-Type": "application/json" },
       });
     } catch (e) {
@@ -58,6 +55,10 @@ export class HermesContainer extends DurableObject {
         image: container.images.base,
         instance: "standard-1",
         enableInternet: true,
+        env: {
+          OPENROUTER_API_KEY: this.env.OPENROUTER_API_KEY || "",
+        },
+        entrypoint: ["/opt/hermes/hermes", "gateway"],
       });
     }
     await container.setInactivityTimeout(INACTIVITY_TIMEOUT_MS);
