@@ -17,21 +17,29 @@ export class HermesContainer extends DurableObject {
   }
 
   async fetch(request: Request): Promise<Response> {
-    this.starting ??= this.startAndWait().finally(() => {
-      this.starting = undefined;
-    });
-    await this.starting;
+    try {
+      this.starting ??= this.startAndWait().finally(() => {
+        this.starting = undefined;
+      });
+      await this.starting;
 
-    const url = new URL(request.url);
-    url.protocol = "http:";
-    url.host = "container";
-    const forwarded = new Request(url, request);
-    forwarded.headers.delete("host");
-    return this.ctx.container.getTcpPort(PORT).fetch(forwarded);
+      const url = new URL(request.url);
+      url.protocol = "http:";
+      url.host = "container";
+      const forwarded = new Request(url, request);
+      forwarded.headers.delete("host");
+      return this.ctx.container.getTcpPort(PORT).fetch(forwarded);
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message, stack: e.stack }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   }
 
   private async startAndWait(): Promise<void> {
     const container = this.ctx.container;
+    if (!container) throw new Error("No container configured on ctx");
     if (!container.running) {
       container.start({
         image: container.images.base,
@@ -45,8 +53,15 @@ export class HermesContainer extends DurableObject {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const id = env.HERMES_CONTAINER.idFromName("hermes");
-    const stub = env.HERMES_CONTAINER.get(id);
-    return stub.fetch(request);
+    try {
+      const id = env.HERMES_CONTAINER.idFromName("hermes");
+      const stub = env.HERMES_CONTAINER.get(id);
+      return stub.fetch(request);
+    } catch (e) {
+      return new Response(JSON.stringify({ error: e.message, stack: e.stack }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
   },
 };
