@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
+const PORT = 8080;
 
 export class HermesContainer extends DurableObject {
   starting: Promise<void> | undefined;
@@ -12,13 +13,18 @@ export class HermesContainer extends DurableObject {
       });
       await this.starting;
 
-      const container = this.ctx.container;
-      return new Response(JSON.stringify({
-        status: "container started",
-        running: container?.running,
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
+      const url = new URL(request.url);
+      url.protocol = "http:";
+      url.host = "container";
+      const forwarded = new Request(url, request);
+      forwarded.headers.delete("host");
+
+      const containerPort = this.ctx.container.getTcpPort(PORT);
+      const response = await containerPort.fetch(forwarded);
+
+      return new Response(response.body, {
+        status: response.status,
+        headers: response.headers,
       });
     } catch (e) {
       return new Response(JSON.stringify({ error: e.message, stack: e.stack }), {
