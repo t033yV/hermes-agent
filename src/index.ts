@@ -9,7 +9,7 @@ export class HermesContainer extends DurableObject {
         instance: "standard-1",
         enableInternet: true,
         env: { OPENROUTER_API_KEY: this.env.OPENROUTER_API_KEY || "" },
-        entrypoint: ["sleep", "infinity"],
+        entrypoint: ["/init", "sleep", "infinity"],
       });
     }
     await container.setInactivityTimeout(30 * 60 * 1000);
