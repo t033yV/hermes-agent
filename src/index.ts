@@ -12,26 +12,31 @@ export class HermesContainer extends DurableObject {
       });
       await this.starting;
 
-      const container = this.ctx.container;
-      const monitor = container.monitor();
-      const reader = monitor.getReader();
-      const events = [];
       const decoder = new TextDecoder();
+      const results = {};
 
-      const timeout = new Promise(resolve => setTimeout(() => resolve({ done: true }), 8000));
+      const commands = [
+        ["ps", "aux"],
+        ["sh", "-c", "ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || echo 'no ss/netstat'"],
+        ["sh", "-c", "cat /proc/1/cmdline | tr '\\0' ' '"],
+        ["sh", "-c", "ls /app /workspace /opt /home 2>/dev/null || echo 'no common dirs'"],
+      ];
 
-      while (true) {
-        const result = await Promise.race([reader.read(), timeout]);
-        if (result.done) break;
-        if (result.value) {
-          events.push({
-            type: result.value.type,
-            data: result.value.data ? decoder.decode(result.value.data) : null,
-          });
+      for (const cmd of commands) {
+        try {
+          const process = await this.ctx.container.exec(cmd);
+          const output = await process.output();
+          results[cmd.join(" ")] = {
+            exitCode: output.exitCode,
+            stdout: decoder.decode(output.stdout).slice(0, 2000),
+            stderr: decoder.decode(output.stderr).slice(0, 500),
+          };
+        } catch (e) {
+          results[cmd.join(" ")] = { error: e.message };
         }
       }
 
-      return new Response(JSON.stringify({ events }, null, 2), {
+      return new Response(JSON.stringify(results, null, 2), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
