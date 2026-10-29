@@ -12,20 +12,26 @@ export class HermesContainer extends DurableObject {
       });
       await this.starting;
 
-      const ports = [80, 3000, 5000, 8000, 8080, 8888, 11434];
-      const results = [];
+      const container = this.ctx.container;
+      const monitor = container.monitor();
+      const reader = monitor.getReader();
+      const events = [];
+      const decoder = new TextDecoder();
 
-      for (const port of ports) {
-        try {
-          const containerPort = this.ctx.container.getTcpPort(port);
-          const response = await containerPort.fetch(new Request("http://container/"));
-          results.push({ port, status: response.status, ok: true });
-        } catch (e) {
-          results.push({ port, error: e.message, ok: false });
+      const timeout = new Promise(resolve => setTimeout(() => resolve({ done: true }), 8000));
+
+      while (true) {
+        const result = await Promise.race([reader.read(), timeout]);
+        if (result.done) break;
+        if (result.value) {
+          events.push({
+            type: result.value.type,
+            data: result.value.data ? decoder.decode(result.value.data) : null,
+          });
         }
       }
 
-      return new Response(JSON.stringify({ results }, null, 2), {
+      return new Response(JSON.stringify({ events }, null, 2), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
