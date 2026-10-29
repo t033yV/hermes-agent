@@ -16,10 +16,14 @@ export class HermesContainer extends DurableObject {
       const results = {};
 
       const commands = [
-        ["ps", "aux"],
-        ["sh", "-c", "ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null || echo 'no ss/netstat'"],
-        ["sh", "-c", "cat /proc/1/cmdline | tr '\\0' ' '"],
-        ["sh", "-c", "ls /app /workspace /opt /home 2>/dev/null || echo 'no common dirs'"],
+        ["sh", "-c", "cat /opt/hermes/docker/main-wrapper.sh 2>/dev/null || echo 'not found'"],
+        ["sh", "-c", "ls -la /run/service/ 2>/dev/null || echo 'no service dir'"],
+        ["sh", "-c", "find /run/service -name 'run' -exec echo {} \\; -exec cat {} \\; 2>/dev/null | head -100"],
+        ["sh", "-c", "ls -la /opt/hermes/ 2>/dev/null"],
+        ["sh", "-c", "cat /opt/hermes/docker/entrypoint.sh 2>/dev/null || echo 'no entrypoint'"],
+        ["sh", "-c", "find /run/service -name 'finish' -exec echo {} \\; -exec cat {} \\; 2>/dev/null | head -50"],
+        ["sh", "-c", "s6-svstat /run/service/* 2>/dev/null || echo 's6-svstat not available'"],
+        ["sh", "-c", "cat /run/service/*/log/fifo 2>/dev/null || ls /var/log/ 2>/dev/null || echo 'no logs'"],
       ];
 
       for (const cmd of commands) {
@@ -28,7 +32,7 @@ export class HermesContainer extends DurableObject {
           const output = await process.output();
           results[cmd.join(" ")] = {
             exitCode: output.exitCode,
-            stdout: decoder.decode(output.stdout).slice(0, 2000),
+            stdout: decoder.decode(output.stdout).slice(0, 3000),
             stderr: decoder.decode(output.stderr).slice(0, 500),
           };
         } catch (e) {
