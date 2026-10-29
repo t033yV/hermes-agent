@@ -7,8 +7,12 @@
     {
       "class_name": "HermesContainer",
       "scheduling_policy": "durable_object",
-      "ssh": true,
-      "authorized_keys": ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMZw9Gubsz0SZJa0nhXUZhIOy3jBJ8Gjm5chlZXwncH3 mick@mickvercettis-imac.tail820758.ts.net"],
+      "authorized_keys": [
+        {
+          "name": "mick",
+          "public_key": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMZw9Gubsz0SZJa0nhXUZhIOy3jBJ8Gjm5chlZXwncH3 mick@mickvercettis-imac.tail820758.ts.net"
+        }
+      ],
       "images": {
         "base": {
           "dockerfile": "./Dockerfile"
