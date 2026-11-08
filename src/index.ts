@@ -49,7 +49,7 @@ export class HermesContainer extends DurableObject {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const id = env.HERMES_CONTAINER.idFromName("hermes");
+    const id = env.HERMES_CONTAINER.idFromName("hermes-v2");
     const stub = env.HERMES_CONTAINER.get(id);
     return stub.fetch(request);
   },
