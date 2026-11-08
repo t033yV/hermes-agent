@@ -13,11 +13,15 @@ export class HermesContainer extends DurableObject {
         image: container.images.base,
         instance: "standard-1",
         enableInternet: true,
-        env: { OPENROUTER_API_KEY: this.env.OPENROUTER_API_KEY || "" },
-        entrypoint: ["/init", "sleep", "infinity"],
+        env: {
+          OPENROUTER_API_KEY: this.env.OPENROUTER_API_KEY || "",
+          R2_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID || "",
+          R2_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY || "",
+          R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID || "",
+        },
       });
-      await container.setInactivityTimeout(30 * 60 * 1000);
-      return new Response("Container reset. Wait 10s then list instances.");
+      await container.setInactivityTimeout(24 * 60 * 60 * 1000);
+      return new Response("Container reset with R2 mount.");
     }
 
     if (!container.running) {
@@ -25,12 +29,16 @@ export class HermesContainer extends DurableObject {
         image: container.images.base,
         instance: "standard-1",
         enableInternet: true,
-        env: { OPENROUTER_API_KEY: this.env.OPENROUTER_API_KEY || "" },
-        entrypoint: ["/init", "sleep", "infinity"],
+        env: {
+          OPENROUTER_API_KEY: this.env.OPENROUTER_API_KEY || "",
+          R2_ACCESS_KEY_ID: this.env.R2_ACCESS_KEY_ID || "",
+          R2_SECRET_ACCESS_KEY: this.env.R2_SECRET_ACCESS_KEY || "",
+          R2_ACCOUNT_ID: this.env.R2_ACCOUNT_ID || "",
+        },
       });
     }
-    await container.setInactivityTimeout(30 * 60 * 1000);
-    return new Response("Hermes container running. Connect via SSH.");
+    await container.setInactivityTimeout(24 * 60 * 60 * 1000);
+    return new Response("Hermes container running with R2 persistent storage.");
   }
 }
 
